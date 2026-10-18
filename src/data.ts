@@ -2,7 +2,7 @@ export const PROFILE = {
   name: 'Waseeq Ahmed Ansari',
   short: 'Waseeq',
   role: 'Backend focused full stack engineer',
-  availability: 'Open to roles · Remote / Karachi',
+  availability: 'Open to roles · Remote / Karachi / International',
   location: 'Karachi, Pakistan',
   email: 'ansariwaseeq5@gmail.com',
   phone: '+92 312 8757721',

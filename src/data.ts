@@ -2,6 +2,7 @@ export const PROFILE = {
   name: 'Waseeq Ahmed Ansari',
   short: 'Waseeq',
   role: 'Backend focused full stack engineer',
+  availability: 'Open to roles · Remote / Karachi',
   location: 'Karachi, Pakistan',
   email: 'ansariwaseeq5@gmail.com',
   phone: '+92 312 8757721',
@@ -13,19 +14,21 @@ export const PROFILE = {
 }
 
 export const LINKS = [
-  { label: 'Email', href: `mailto:${PROFILE.email}` },
   { label: 'LinkedIn', href: PROFILE.linkedin },
   { label: 'GitHub', href: PROFILE.github },
+  { label: 'Resume (PDF)', href: PROFILE.resume },
 ]
 
 export const SECTIONS = [
-  { id: 'arrival', index: '01', label: 'Arrival' },
-  { id: 'brief', index: '02', label: 'Brief' },
-  { id: 'stack', index: '03', label: 'Stack' },
-  { id: 'log', index: '04', label: 'Log' },
-  { id: 'work', index: '05', label: 'Work' },
-  { id: 'signal', index: '06', label: 'Signal' },
+  { id: 'arrival', index: '01', label: 'Arrival', plain: 'Home' },
+  { id: 'brief', index: '02', label: 'Brief', plain: 'About' },
+  { id: 'stack', index: '03', label: 'Stack', plain: 'Skills' },
+  { id: 'log', index: '04', label: 'Log', plain: 'Experience' },
+  { id: 'work', index: '05', label: 'Work', plain: 'Projects' },
+  { id: 'signal', index: '06', label: 'Signal', plain: 'Contact' },
 ] as const
+
+export type SectionId = (typeof SECTIONS)[number]['id']
 
 export const STATS = [
   { value: '3 yrs', label: 'production work' },
@@ -45,6 +48,75 @@ export const TICKER = [
   'MATCH · seeker/provider ownership checks passed',
 ]
 
+export const MAP_NODES = [
+  {
+    id: 'karachi',
+    x: 320,
+    y: 78,
+    label: 'Karachi',
+    sub: 'base',
+    title: 'Home base',
+    metric: '3 yrs · 4 teams',
+    body: 'Where I build from. Backend focused full stack, remote-friendly, on PKT (UTC+5).',
+    stack: ['NestJS', 'React', 'AWS'],
+  },
+  {
+    id: 'portl',
+    x: 470,
+    y: 168,
+    label: 'Portl',
+    sub: '68k+ users',
+    title: 'Portl · nightlife app',
+    metric: '68k+ users',
+    body: 'Booking, feed, merchant portals, and payment rails for a live product in the UAE and Thailand.',
+    stack: ['Node.js', 'MongoDB', 'Stripe', 'Solana'],
+  },
+  {
+    id: 'senvers',
+    x: 168,
+    y: 176,
+    label: 'Senvers',
+    sub: 'slot lock',
+    title: 'Senvers · marketplace',
+    metric: 'atomic booking',
+    body: 'A seeker/provider marketplace where two people can never take the same slot.',
+    stack: ['NestJS', 'gRPC', 'Prisma', 'PostgreSQL'],
+  },
+  {
+    id: 'lima',
+    x: 250,
+    y: 312,
+    label: 'Lima',
+    sub: 'syllabus AI',
+    title: 'Lima · EdTech AI',
+    metric: 'OpenAI + Gemini',
+    body: 'AI syllabus parsing, vocabulary workshops, and assessment cooldowns for real classrooms.',
+    stack: ['React', 'Supabase', 'Gemini'],
+  },
+  {
+    id: 'pay',
+    x: 456,
+    y: 318,
+    label: 'Payments',
+    sub: 'fiat + chain',
+    title: 'Payment rails',
+    metric: '~20% faster',
+    body: 'Stripe, Apple Pay, PayPal, Ethereum, and Solana, with credentials kept in AWS Secrets Manager.',
+    stack: ['Stripe', 'Solana', 'Lambda'],
+  },
+  {
+    id: 'outbox',
+    x: 140,
+    y: 400,
+    label: 'Outbox',
+    sub: 'SQS once',
+    title: 'Outbox notifications',
+    metric: 'idempotent',
+    body: 'BOOKING_CREATED events delivered once to in-app, push, and email, even when a retry fires.',
+    stack: ['SQS', 'PostgreSQL', 'SNS'],
+  },
+]
+
 export const BRING = [
   'Transactional booking and marketplace APIs that stay honest under concurrent load',
   'Event-driven notifications with SQS/outbox and idempotent delivery',
@@ -62,6 +134,7 @@ export const NEXT = [
 export const STACK = [
   {
     title: 'Booking & APIs',
+    icon: 'api',
     copy: 'The floor people actually stand on. Service boundaries, auth, and the write path.',
     items: [
       'NestJS, Node.js, TypeScript',
@@ -72,6 +145,7 @@ export const STACK = [
   },
   {
     title: 'Events & Data',
+    icon: 'events',
     copy: 'What happens after the request returns. Queues, caches, and the source of truth.',
     items: [
       'PostgreSQL, Prisma, MongoDB, Redis',
@@ -82,6 +156,7 @@ export const STACK = [
   },
   {
     title: 'Payments & Cloud',
+    icon: 'payments',
     copy: 'Money and credentials moving through production, not a local .env file.',
     items: [
       'Stripe, PayPal, Apple Pay',
@@ -92,6 +167,7 @@ export const STACK = [
   },
   {
     title: 'Product & AI',
+    icon: 'ai',
     copy: 'When the backend has to show up in a UI, a classroom, or a chat widget.',
     items: [
       'React, Next.js, Vite',
@@ -100,7 +176,7 @@ export const STACK = [
       'Cursor and Copilot as daily tools',
     ],
   },
-]
+] as const
 
 export const EXPERIENCE = [
   {
@@ -108,14 +184,17 @@ export const EXPERIENCE = [
     role: 'Backend Engineer',
     dates: 'Jan 2026 — Present',
     place: 'Karachi',
+    current: true,
+    impact:
+      'Own the booking, matching, and notification write paths for the Senvers marketplace, plus AI features for Lima EdTech.',
     tags: ['NestJS', 'gRPC', 'Prisma', 'SQS', 'OpenAI'],
     bullets: [
-      'Stopped double-booking on the Senvers marketplace with atomic slot reservation, overlap checks, timezone validation, and transactional Prisma writes under concurrent load.',
-      'Made provider notifications reliable with idempotent BOOKING_CREATED events over an SQS/outbox path, delivered across in-app, push, and email.',
-      'Shipped JWT-secured match and profile APIs with ownership checks, filtering, sorting, and lifecycle status updates for seekers and providers.',
-      'Expanded profile and jobs domains with skills/trust summaries, attachments, feed enrichment, and SQS-based file processing.',
-      'Took owned job-service/BFF modules to 100% statement coverage and hardened CI through Docker Compose, LocalStack, and GitHub Actions.',
-      'Worked directly with the Lima EdTech product team on AI syllabus parsing, vocabulary workshops, and assessment cooldowns using OpenAI/Gemini, Supabase, Redis, and S3.',
+      'Ended double-booking with atomic slot reservation, overlap checks, and Prisma transactions.',
+      'Idempotent BOOKING_CREATED events over SQS/outbox to in-app, push, and email.',
+      'JWT-secured match and profile APIs with ownership and lifecycle checks.',
+      'Profile and jobs features: trust summaries, feed enrichment, SQS file processing.',
+      '100% statement coverage on owned modules, enforced in Docker Compose, LocalStack, and GitHub Actions.',
+      'Lima EdTech: AI syllabus parsing, vocabulary workshops, and assessment cooldowns with OpenAI/Gemini.',
     ],
   },
   {
@@ -123,12 +202,15 @@ export const EXPERIENCE = [
     role: 'Backend Engineer',
     dates: 'Oct 2025 — Dec 2025',
     place: 'Karachi',
+    current: false,
+    impact:
+      'Built the backend for an AI-agent SaaS: crawl a site, train an agent, embed it, and hand off to a human.',
     tags: ['Node.js', 'BullMQ', 'WhatsApp', 'AWS EC2'],
     bullets: [
-      'Built a SaaS workspace backend for website crawling and AI agent training, including an embeddable chat widget with AI replies and live-agent takeover.',
-      'Moved crawling, ingestion, and agent-training workloads onto Redis/BullMQ so long-running jobs stay out of the request cycle.',
-      'Shipped REST APIs for crawled sites, training data, agent configs, and customer workspaces.',
-      'Shipped WhatsApp messaging through Baileys with Redis/BullMQ queues, running Node services on AWS EC2 under PM2.',
+      'Embeddable chat widget with AI replies and live-agent takeover.',
+      'Crawling, ingestion, and training moved onto Redis/BullMQ so APIs stay responsive.',
+      'REST APIs for crawled sites, training data, agent configs, and workspaces.',
+      'WhatsApp messaging via Baileys and BullMQ, running on AWS EC2 under PM2.',
     ],
   },
   {
@@ -136,12 +218,14 @@ export const EXPERIENCE = [
     role: 'Software Developer',
     dates: 'Sep 2023 — Aug 2025',
     place: 'Karachi',
+    current: false,
+    impact: 'Kept Portl’s booking, feed, and payment backend standing for 68k+ users.',
     tags: ['Node.js', 'MongoDB', 'Stripe', 'Web3', 'Redis'],
     bullets: [
-      'Worked on the production platform behind Portl — a nightlife and social discovery app for restaurants, beach clubs, events, guestlists, and tables.',
-      'Scaled Web3 event platform APIs to reliably serve 17,000+ users across booking, personalized feed, and merchant/admin portals.',
-      'Integrated fiat and crypto payments (Stripe, Apple Pay, Ethereum, Solana) with AWS Secrets Manager, Lambda, SQS, SNS, Redis, and S3.',
-      'Cut payment processing time by about 20% with Stripe/PayPal integrations and Redis session caching on e-commerce APIs.',
+      'Scaled Node/Express/MongoDB APIs for booking, personalized feed, and merchant/admin portals.',
+      'Fiat and crypto payments: Stripe, Apple Pay, Ethereum, Solana, secured with AWS Secrets Manager.',
+      'Async payment workflows on Lambda, SQS, SNS, Redis, and S3.',
+      'About 20% faster payment processing with Stripe/PayPal and Redis session caching.',
     ],
   },
 ]
@@ -154,7 +238,22 @@ export const EDUCATION = {
   place: 'Karachi',
 }
 
-export const PROJECTS = [
+export type FlowStep = { label: string; sub: string }
+
+export type Project = {
+  id: string
+  featured: boolean
+  name: string
+  kicker: string
+  href: string | null
+  hrefLabel: string | null
+  stack: string[]
+  blurb: string
+  details: string
+  flow: FlowStep[]
+}
+
+export const PROJECTS: Project[] = [
   {
     id: 'portl',
     featured: true,
@@ -166,7 +265,14 @@ export const PROJECTS = [
     blurb:
       'Find the places, plans and people worth going out for. Discover restaurants, beach clubs, nightlife and events. Join guestlists, book tables and see who’s going.',
     details:
-      'I worked on the backend of the live product: booking and feed paths, merchant/admin portals, and payment rails across Stripe, Apple Pay, Ethereum, and Solana. The app now runs in the UAE and Thailand, with 17,000+ users on the platform I helped keep standing.',
+      'I worked on the backend of the live product: booking and feed paths, merchant/admin portals, and payment rails across Stripe, Apple Pay, Ethereum, and Solana. The app runs in the UAE and Thailand, with 68k+ users on the platform I helped keep standing.',
+    flow: [
+      { label: 'Mobile app', sub: 'iOS · Android' },
+      { label: 'API', sub: 'Node · Express' },
+      { label: 'Booking + feed', sub: 'MongoDB' },
+      { label: 'Payments', sub: 'Stripe · Solana' },
+      { label: 'Merchant portal', sub: 'admin' },
+    ],
   },
   {
     id: 'senvers',
@@ -180,6 +286,14 @@ export const PROJECTS = [
       'Booking, match, profile, and jobs APIs for a service marketplace — with JWT-secured endpoints, outbox notifications, and 100% coverage on critical modules.',
     details:
       'The hard part was correctness: atomic slot reservation so two seekers cannot take the same time, then an outbox so the provider still hears about it once.',
+    flow: [
+      { label: 'Request', sub: 'book slot' },
+      { label: 'Slot lock', sub: 'overlap check' },
+      { label: 'Prisma tx', sub: 'PostgreSQL' },
+      { label: 'Outbox', sub: 'BOOKING_CREATED' },
+      { label: 'SQS', sub: 'queue' },
+      { label: 'Notify', sub: 'push · email' },
+    ],
   },
   {
     id: 'lima',
@@ -190,9 +304,16 @@ export const PROJECTS = [
     hrefLabel: null,
     stack: ['React', 'TypeScript', 'Express', 'Supabase', 'OpenAI', 'Gemini'],
     blurb:
-      'Vocabulary workshops, AI syllabus parsing, and teacher/student performance insights, built in direct coordination with the product owner.',
+      'Vocabulary workshops, AI syllabus parsing, and teacher/student performance insights, built with the product owner.',
     details:
       'The models only mattered because they sat inside a real classroom workflow — parse a syllabus, run a workshop, respect assessment cooldowns.',
+    flow: [
+      { label: 'Syllabus', sub: 'upload' },
+      { label: 'Gemini parse', sub: 'structure' },
+      { label: 'Workshops', sub: 'vocabulary' },
+      { label: 'Cooldowns', sub: 'assessments' },
+      { label: 'Insights', sub: 'teacher view' },
+    ],
   },
   {
     id: 'sleekhive',
@@ -203,9 +324,16 @@ export const PROJECTS = [
     hrefLabel: null,
     stack: ['Node.js', 'Redis', 'BullMQ', 'Baileys', 'PM2'],
     blurb:
-      'Workspace backend for crawling sites, training AI agents, and handing a chat from the model to a live person — including WhatsApp in production.',
+      'Workspace backend for crawling sites, training AI agents, and handing a chat from the model to a live person — including WhatsApp.',
     details:
       'Crawling, queues, and takeover had to coexist. The widget could answer, then a human could step in without dropping the thread.',
+    flow: [
+      { label: 'Crawl', sub: 'website' },
+      { label: 'BullMQ', sub: 'jobs' },
+      { label: 'Train agent', sub: 'ingest' },
+      { label: 'Widget', sub: 'AI replies' },
+      { label: 'Live agent', sub: 'takeover' },
+    ],
   },
   {
     id: 'tb',
@@ -219,38 +347,57 @@ export const PROJECTS = [
       'Trained CNN models on chest X-rays with 90%+ classification accuracy for tuberculosis detection.',
     details:
       'A final-year project with a clear metric: can the model read a chest film well enough to be useful in screening, not just in a notebook.',
+    flow: [
+      { label: 'Chest X-ray', sub: 'input' },
+      { label: 'Preprocess', sub: 'normalize' },
+      { label: 'CNN', sub: 'PyTorch' },
+      { label: 'Result', sub: '90%+ accuracy' },
+    ],
   },
 ]
 
-export const TOUR_STEPS = [
+export type TourStep = {
+  id: SectionId
+  room: string
+  target: string
+  caption: string
+}
+
+export const TOUR_STEPS: TourStep[] = [
   {
     id: 'arrival',
-    title: 'Arrival',
-    copy: 'This is the floor, not a launch pad. Start with who I am, then walk the systems I actually shipped.',
+    room: 'The door',
+    target: '.map-wrap',
+    caption: 'Hover a node. The city is my stack, and Portl is where the night started.',
   },
   {
     id: 'brief',
-    title: 'Brief',
-    copy: 'Backend focused, full stack when it matters. Booking integrity, notifications that retry safely, and the UI on top when the product needs to ship end to end.',
+    room: 'The bar',
+    target: '.pull',
+    caption: 'Pull up a stool. Backend first, and the UI on top when the product has to ship end to end.',
   },
   {
     id: 'stack',
-    title: 'Stack',
-    copy: 'Grouped the way the work showed up: APIs, events, payments, and the AI features that had to live in a real product.',
+    room: 'The kitchen',
+    target: '.stack-tile.is-lead',
+    caption: 'Where the orders get made: service boundaries, auth, and a write path that never double-books.',
   },
   {
     id: 'log',
-    title: 'Log',
-    copy: 'Three rooms. MindTech for Senvers and Lima. Sleekhive for agents. SOC Solutions for Portl, payments, and production load.',
+    room: 'The guest book',
+    target: '.timeline-item.is-current',
+    caption: 'Signed in at MindTech right now, after Sleekhive and two years keeping Portl standing.',
   },
   {
     id: 'work',
-    title: 'Work',
-    copy: 'Portl is the live nightlife product. Senvers is the marketplace write-path. Lima is classroom AI. The FYP is the medical model.',
+    room: 'The main floor',
+    target: '#work .flow',
+    caption: 'Portl, end to end: app, API, bookings, payments, and the merchant portal for 68k+ guests.',
   },
   {
     id: 'signal',
-    title: 'Signal',
-    copy: 'If you need someone who can own a service, debug production, and still ship the UI when it matters, send the booking.',
+    room: 'Last call',
+    target: '.signal-panel',
+    caption: 'The bar is still open. Send the booking and I will answer the signal.',
   },
 ]

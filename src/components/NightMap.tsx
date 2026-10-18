@@ -1,11 +1,6 @@
-const NODES = [
-  { id: 'karachi', x: 320, y: 78, label: 'Karachi', sub: 'base' },
-  { id: 'portl', x: 470, y: 168, label: 'Portl', sub: '68k users' },
-  { id: 'senvers', x: 168, y: 176, label: 'Senvers', sub: 'slot lock' },
-  { id: 'lima', x: 250, y: 312, label: 'Lima', sub: 'syllabus AI' },
-  { id: 'pay', x: 456, y: 318, label: 'Payments', sub: 'fiat + chain' },
-  { id: 'outbox', x: 140, y: 400, label: 'Outbox', sub: 'SQS once' },
-]
+import { useState } from 'react'
+import { MAP_NODES } from '../data'
+import { usePrefersReducedMotion } from '../hooks'
 
 const PATHS = [
   'M320 78 C 280 110, 210 130, 168 176',
@@ -16,18 +11,18 @@ const PATHS = [
   'M456 318 C 360 360, 240 390, 140 400',
 ]
 
-type Props = {
-  onSelect?: (id: string) => void
-}
+export default function NightMap() {
+  const reduced = usePrefersReducedMotion()
+  const [selected, setSelected] = useState('portl')
+  const node = MAP_NODES.find((item) => item.id === selected) ?? MAP_NODES[0]
 
-export default function NightMap({ onSelect }: Props) {
   return (
-    <div className="map-wrap" aria-hidden="false">
+    <div className="map-wrap">
       <header>
         <span>Live circuit</span>
-        <span>bookings · matches · nights</span>
+        <span>Hover or tap a node</span>
       </header>
-      <svg viewBox="0 0 640 480" role="img" aria-label="Map of shipped systems">
+      <svg viewBox="0 0 640 480" role="group" aria-label="Map of systems I shipped">
         <defs>
           <radialGradient id="glow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#e0a36a" stopOpacity="0.9" />
@@ -35,43 +30,81 @@ export default function NightMap({ onSelect }: Props) {
           </radialGradient>
         </defs>
         {PATHS.map((d) => (
-          <path
-            key={d}
-            d={d}
-            fill="none"
-            stroke="rgba(243,236,227,0.18)"
-            strokeWidth="1.4"
-          />
+          <path key={d} d={d} fill="none" stroke="rgba(243,236,227,0.18)" strokeWidth="1.4" />
         ))}
-        {PATHS.map((d, i) => (
-          <circle key={`t-${i}`} r="3.2" fill={i % 2 ? '#7dffe1' : '#e0a36a'}>
-            <animateMotion dur={`${7 + i}s`} repeatCount="indefinite" path={d} />
-          </circle>
-        ))}
-        {NODES.map((node) => (
-          <g
-            key={node.id}
-            style={{ cursor: 'pointer' }}
-            onClick={() => onSelect?.(node.id)}
-          >
-            <circle cx={node.x} cy={node.y} r="18" fill="url(#glow)" opacity="0.55">
-              <animate
-                attributeName="r"
-                values="14;22;14"
-                dur="3.6s"
-                repeatCount="indefinite"
-              />
+        {!reduced &&
+          PATHS.map((d, i) => (
+            <circle key={`t-${i}`} r="3.2" fill={i % 2 ? '#7dffe1' : '#e0a36a'}>
+              <animateMotion dur={`${7 + i}s`} repeatCount="indefinite" path={d} />
             </circle>
-            <circle cx={node.x} cy={node.y} r="5.5" fill="#f3ece3" />
-            <text className="node-label" x={node.x + 14} y={node.y - 4}>
-              {node.label}
-            </text>
-            <text className="node-sub" x={node.x + 14} y={node.y + 10}>
-              {node.sub}
-            </text>
-          </g>
-        ))}
+          ))}
+        {MAP_NODES.map((item) => {
+          const active = item.id === selected
+          return (
+            <g
+              key={item.id}
+              className={`map-node ${active ? 'is-active' : ''}`}
+              role="button"
+              tabIndex={0}
+              aria-label={`${item.label}: ${item.title}`}
+              aria-pressed={active}
+              onMouseEnter={() => setSelected(item.id)}
+              onFocus={() => setSelected(item.id)}
+              onClick={() => setSelected(item.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  setSelected(item.id)
+                }
+              }}
+            >
+              <circle cx={item.x} cy={item.y} r="28" fill="transparent" />
+              <circle
+                cx={item.x}
+                cy={item.y}
+                r="18"
+                fill="url(#glow)"
+                opacity={active ? 0.95 : 0.5}
+              >
+                {!reduced && (
+                  <animate attributeName="r" values="14;22;14" dur="3.6s" repeatCount="indefinite" />
+                )}
+              </circle>
+              {active && (
+                <circle
+                  cx={item.x}
+                  cy={item.y}
+                  r="11"
+                  fill="none"
+                  stroke="#e0a36a"
+                  strokeWidth="1.5"
+                />
+              )}
+              <circle cx={item.x} cy={item.y} r="5.5" fill={active ? '#e0a36a' : '#f3ece3'} />
+              <text className="node-label" x={item.x + 14} y={item.y - 4}>
+                {item.label}
+              </text>
+              <text className="node-sub" x={item.x + 14} y={item.y + 10}>
+                {item.sub}
+              </text>
+            </g>
+          )
+        })}
       </svg>
+      <div className="map-detail" aria-live="polite">
+        <div className="map-detail-head">
+          <strong>{node.title}</strong>
+          <span>{node.metric}</span>
+        </div>
+        <p>{node.body}</p>
+        <div className="chips">
+          {node.stack.map((tag) => (
+            <span className="chip" key={tag}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

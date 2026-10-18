@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
+import CountUp from './components/CountUp'
+import FlowDiagram from './components/FlowDiagram'
+import { GitHubIcon, LinkedInIcon, MailIcon, StackIcon } from './components/Icons'
 import NightMap from './components/NightMap'
 import PortlStage from './components/PortlStage'
 import TourDock from './components/TourDock'
+import TourRoute from './components/TourRoute'
+import TourSpotlight from './components/TourSpotlight'
+import TourTicket from './components/TourTicket'
 import {
   BRING,
   EDUCATION,
@@ -16,6 +23,8 @@ import {
   TICKER,
   TOUR_STEPS,
 } from './data'
+import type { SectionId } from './data'
+import { usePrefersReducedMotion, useReveal } from './hooks'
 
 function karachiClock(now = new Date()) {
   return new Intl.DateTimeFormat('en-GB', {
@@ -26,45 +35,76 @@ function karachiClock(now = new Date()) {
   }).format(now)
 }
 
-export default function App() {
-  const [active, setActive] = useState<(typeof SECTIONS)[number]['id']>('arrival')
-  const [tourOpen, setTourOpen] = useState(false)
-  const [tourStep, setTourStep] = useState(0)
-  const [paused, setPaused] = useState(false)
-  const [clock, setClock] = useState(() => karachiClock())
+function kicker(id: SectionId) {
+  const section = SECTIONS.find((item) => item.id === id)!
+  return `${section.index} · ${section.label} / ${section.plain}`
+}
 
-  const goTo = useCallback((id: string) => {
-    setActive(id as (typeof SECTIONS)[number]['id'])
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
+const delay = (index: number) => ({ '--d': `${index * 90}ms` }) as CSSProperties
+
+export default function App() {
+  const [active, setActive] = useState<SectionId>('arrival')
+  const [tourPhase, setTourPhase] = useState<'off' | 'ticket' | 'rooms'>('off')
+  const [tourStep, setTourStep] = useState(0)
+  const [visited, setVisited] = useState<Set<number>>(() => new Set())
+  const [autoplay, setAutoplay] = useState(false)
+  const [holding, setHolding] = useState(false)
+  const triggerRef = useRef<HTMLElement | null>(null)
+  const dockRef = useRef<HTMLElement>(null)
+  const [clock, setClock] = useState(() => karachiClock())
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+  const reduced = usePrefersReducedMotion()
+
+  useReveal()
+
+  const showStep = useCallback(
+    (index: number) => {
+      const step = TOUR_STEPS[index]
+      const target = document.querySelector(step.target) ?? document.getElementById(step.id)
+      if (target) {
+        const rect = target.getBoundingClientRect()
+        const offset = Math.max(96, window.innerHeight * 0.4 - rect.height / 2)
+        window.scrollTo({
+          top: Math.max(0, rect.top + window.scrollY - offset),
+          behavior: reduced ? 'auto' : 'smooth',
+        })
+      }
+      setActive(step.id)
+      setTourStep(index)
+      setVisited((current) => (current.has(index) ? current : new Set(current).add(index)))
+    },
+    [reduced],
+  )
 
   const startTour = () => {
-    setTourOpen(true)
+    if (tourPhase === 'off') triggerRef.current = document.activeElement as HTMLElement | null
+    setVisited(new Set())
+    setAutoplay(false)
+    setHolding(false)
     setTourStep(0)
-    setPaused(false)
-    goTo(TOUR_STEPS[0].id)
+    setTourPhase('ticket')
   }
 
-  const closeTour = () => {
-    setTourOpen(false)
-    setPaused(false)
-  }
+  const enterRooms = useCallback(() => {
+    setTourPhase('rooms')
+    showStep(0)
+  }, [showStep])
+
+  const closeTour = useCallback(() => {
+    setTourPhase('off')
+    setAutoplay(false)
+    setHolding(false)
+    triggerRef.current?.focus({ preventScroll: true })
+  }, [])
 
   const nextStep = useCallback(() => {
-    setTourStep((current) => {
-      const next = current >= TOUR_STEPS.length - 1 ? 0 : current + 1
-      goTo(TOUR_STEPS[next].id)
-      return next
-    })
-  }, [goTo])
+    if (tourStep < TOUR_STEPS.length - 1) showStep(tourStep + 1)
+  }, [tourStep, showStep])
 
-  const prevStep = () => {
-    setTourStep((current) => {
-      const next = Math.max(0, current - 1)
-      goTo(TOUR_STEPS[next].id)
-      return next
-    })
-  }
+  const prevStep = useCallback(() => {
+    if (tourStep > 0) showStep(tourStep - 1)
+  }, [tourStep, showStep])
 
   useEffect(() => {
     const timer = window.setInterval(() => setClock(karachiClock()), 15000)
@@ -72,26 +112,45 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!tourOpen || paused) return
-    const timer = window.setInterval(nextStep, 8000)
-    return () => window.clearInterval(timer)
-  }, [tourOpen, paused, nextStep])
+    if (tourPhase !== 'rooms' || !autoplay || holding) return
+    if (tourStep === TOUR_STEPS.length - 1) return
+    const timer = window.setTimeout(nextStep, 7000)
+    return () => window.clearTimeout(timer)
+  }, [tourPhase, autoplay, holding, tourStep, nextStep])
 
   useEffect(() => {
+    if (tourPhase !== 'rooms') return
+    dockRef.current?.focus({ preventScroll: true })
+    document.body.classList.add('is-touring')
+    return () => document.body.classList.remove('is-touring')
+  }, [tourPhase])
+
+  useEffect(() => {
+    if (tourPhase === 'off') return
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeTour()
+      if (tourPhase !== 'rooms') return
+      if (event.key === 'ArrowRight') nextStep()
+      if (event.key === 'ArrowLeft') prevStep()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [tourPhase, closeTour, nextStep, prevStep])
 
   useEffect(() => {
+    let frame = 0
     const onMove = (event: MouseEvent) => {
-      document.documentElement.style.setProperty('--mx', `${event.clientX}px`)
-      document.documentElement.style.setProperty('--my', `${event.clientY}px`)
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        document.documentElement.style.setProperty('--mx', `${event.clientX}px`)
+        document.documentElement.style.setProperty('--my', `${event.clientY}px`)
+      })
     }
     window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('mousemove', onMove)
+    }
   }, [])
 
   useEffect(() => {
@@ -100,14 +159,10 @@ export default function App() {
     )
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-        if (visible?.target.id) {
-          setActive(visible.target.id as (typeof SECTIONS)[number]['id'])
-        }
+        const visible = entries.find((entry) => entry.isIntersecting)
+        if (visible?.target.id) setActive(visible.target.id as SectionId)
       },
-      { rootMargin: '-30% 0px -50% 0px', threshold: [0.15, 0.35, 0.6] },
+      { rootMargin: '-45% 0px -54% 0px', threshold: 0 },
     )
     nodes.forEach((node) => observer.observe(node))
     return () => observer.disconnect()
@@ -115,16 +170,6 @@ export default function App() {
 
   const featured = PROJECTS.find((project) => project.featured)!
   const rest = PROJECTS.filter((project) => !project.featured)
-  const focusId = tourOpen ? TOUR_STEPS[tourStep].id : null
-
-  const handleMapSelect = (id: string) => {
-    if (id === 'portl' || id === 'senvers' || id === 'lima') {
-      goTo('work')
-      return
-    }
-    if (id === 'pay' || id === 'outbox') goTo('stack')
-  }
-
   return (
     <>
       <div className="ambient" />
@@ -140,6 +185,7 @@ export default function App() {
             >
               <small>{section.index}</small>
               <span>{section.label}</span>
+              <em>{section.plain}</em>
             </a>
           ))}
         </nav>
@@ -154,14 +200,11 @@ export default function App() {
             Karachi {clock} PKT
           </div>
           <div className="top-actions">
-            <button className="btn primary" type="button" onClick={startTour}>
-              Walk the floor
-            </button>
             <a className="btn" href={PROFILE.resume} target="_blank" rel="noreferrer">
               Download resume
             </a>
-            <a className="btn ghosted" href={`mailto:${PROFILE.email}`}>
-              Send a signal
+            <a className="icon-btn" href={`mailto:${PROFILE.email}`} aria-label="Email Waseeq">
+              <MailIcon />
             </a>
           </div>
         </header>
@@ -174,49 +217,69 @@ export default function App() {
               className={active === section.id ? 'active' : ''}
               onClick={() => setActive(section.id)}
             >
-              {section.label}
+              {section.plain}
             </a>
           ))}
         </nav>
 
         <main className="page">
-          <section
-            id="arrival"
-            className={`section hero ${focusId === 'arrival' ? 'is-focus' : ''}`}
-          >
+          <section id="arrival" className="section hero">
             <div>
-              <div className="kicker">Night circuit portfolio</div>
-              <p className="role-line">{PROFILE.role}</p>
-              <h1>
+              <div className="status-pill reveal">
+                <i />
+                {PROFILE.availability}
+              </div>
+              <p className="role-line reveal" style={delay(1)}>
+                {PROFILE.role}
+              </p>
+              <h1 className="reveal" style={delay(2)}>
                 {PROFILE.name.split(' ').slice(0, 2).join(' ')}
                 <br />
                 <em>{PROFILE.name.split(' ').slice(2).join(' ')}</em>
               </h1>
-              <p className="lede">{PROFILE.summary}</p>
-              <div className="hero-actions">
+              <p className="lede reveal" style={delay(3)}>
+                {PROFILE.summary}
+              </p>
+              <div className="hero-actions reveal" style={delay(4)}>
                 <button className="btn primary" type="button" onClick={startTour}>
                   Walk the floor
                 </button>
                 <a className="btn" href={PROFILE.resume} target="_blank" rel="noreferrer">
-                  Download resume
+                  Resume
                 </a>
-                <a className="btn" href={PROFILE.github} target="_blank" rel="noreferrer">
-                  GitHub
+                <a
+                  className="icon-btn"
+                  href={PROFILE.github}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="GitHub"
+                >
+                  <GitHubIcon />
                 </a>
-                <a className="btn" href={PROFILE.linkedin} target="_blank" rel="noreferrer">
-                  LinkedIn
+                <a
+                  className="icon-btn"
+                  href={PROFILE.linkedin}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="LinkedIn"
+                >
+                  <LinkedInIcon />
                 </a>
               </div>
               <div className="stats">
-                {STATS.map((stat) => (
-                  <div className="stat" key={stat.label}>
-                    <strong>{stat.value}</strong>
+                {STATS.map((stat, index) => (
+                  <div className="stat reveal" key={stat.label} style={delay(5 + index)}>
+                    <strong>
+                      <CountUp value={stat.value} />
+                    </strong>
                     <span>{stat.label}</span>
                   </div>
                 ))}
               </div>
             </div>
-            <NightMap onSelect={handleMapSelect} />
+            <div className="reveal" style={delay(3)}>
+              <NightMap />
+            </div>
           </section>
 
           <div className="ticker" aria-hidden="true">
@@ -229,14 +292,13 @@ export default function App() {
             </div>
           </div>
 
-          <section
-            id="brief"
-            className={`section ${focusId === 'brief' ? 'is-focus' : ''}`}
-          >
-            <div className="kicker">02 · Brief</div>
+          <section id="brief" className="section">
+            <div className="kicker reveal">{kicker('brief')}</div>
+            <h2 className="pull reveal" style={delay(1)}>
+              I keep the write path honest after the night gets busy.
+            </h2>
             <div className="split">
-              <div className="prose">
-                <h2>I keep the write path honest after the night gets busy.</h2>
+              <div className="prose reveal" style={delay(2)}>
                 <p>
                   Most of my work lives where two users can hit the same slot, the same table,
                   or the same payment at the same time. NestJS and Node services, PostgreSQL
@@ -246,11 +308,11 @@ export default function App() {
                 <p>
                   I also sit with product owners and merchants. Senvers needed a booking lock
                   that could not double-book. Portl needed booking, feed, and payment paths
-                  that still worked for 17,000+ people trying to go out. Lima needed AI that
+                  that still worked for 68k+ people trying to go out. Lima needed AI that
                   parsed a syllabus instead of performing a demo.
                 </p>
               </div>
-              <div className="columns">
+              <div className="columns reveal" style={delay(3)}>
                 <div>
                   <h3>What I bring</h3>
                   <ul>
@@ -271,12 +333,9 @@ export default function App() {
             </div>
           </section>
 
-          <section
-            id="stack"
-            className={`section ${focusId === 'stack' ? 'is-focus' : ''}`}
-          >
-            <div className="kicker">03 · Stack</div>
-            <div className="stack-head">
+          <section id="stack" className="section">
+            <div className="kicker reveal">{kicker('stack')}</div>
+            <div className="stack-head reveal" style={delay(1)}>
               <h2>Systems grouped the way the work arrived.</h2>
               <p className="copy">
                 Not a keyword cloud. The four rooms I actually lived in: APIs, events,
@@ -284,8 +343,15 @@ export default function App() {
               </p>
             </div>
             <div className="stack-grid">
-              {STACK.map((group) => (
-                <article className="stack-card" key={group.title}>
+              {STACK.map((group, index) => (
+                <article
+                  className={`stack-tile reveal ${index === 0 ? 'is-lead' : ''}`}
+                  key={group.title}
+                  style={delay(index + 1)}
+                >
+                  <span className="stack-icon">
+                    <StackIcon name={group.icon} />
+                  </span>
                   <h3>{group.title}</h3>
                   <p>{group.copy}</p>
                   <ul>
@@ -298,24 +364,47 @@ export default function App() {
             </div>
           </section>
 
-          <section
-            id="log"
-            className={`section ${focusId === 'log' ? 'is-focus' : ''}`}
-          >
-            <div className="kicker">04 · Log</div>
-            <div className="log-head">
+          <section id="log" className="section">
+            <div className="kicker reveal">{kicker('log')}</div>
+            <div className="log-head reveal" style={delay(1)}>
               <h2>Recent rooms, and what changed after the work shipped.</h2>
             </div>
-            <div className="log-list">
-              {EXPERIENCE.map((job) => (
-                <article className="job" key={job.company}>
-                  <div className="meta">
-                    <div>{job.dates}</div>
+            <ol className="timeline">
+              {EXPERIENCE.map((job, index) => {
+                const open = Boolean(expanded[job.company])
+                const shown = open ? job.bullets : job.bullets.slice(0, 2)
+                const hidden = job.bullets.length - 2
+                return (
+                  <li
+                    className={`timeline-item reveal ${job.current ? 'is-current' : ''}`}
+                    key={job.company}
+                    style={delay(index + 1)}
+                  >
+                    <span className="timeline-dot" aria-hidden="true" />
+                    <div className="timeline-meta">
+                      {job.dates} · {job.place}
+                      {job.current && <span className="now">Now</span>}
+                    </div>
                     <h3>{job.company}</h3>
                     <div className="role">{job.role}</div>
-                    <div>{job.place}</div>
-                  </div>
-                  <div>
+                    <p className="impact">{job.impact}</p>
+                    <ul>
+                      {shown.map((bullet) => (
+                        <li key={bullet}>{bullet}</li>
+                      ))}
+                    </ul>
+                    {hidden > 0 && (
+                      <button
+                        className="more"
+                        type="button"
+                        aria-expanded={open}
+                        onClick={() =>
+                          setExpanded((value) => ({ ...value, [job.company]: !open }))
+                        }
+                      >
+                        {open ? 'Show less' : `Show ${hidden} more`}
+                      </button>
+                    )}
                     <div className="chips">
                       {job.tags.map((tag) => (
                         <span className="chip" key={tag}>
@@ -323,34 +412,27 @@ export default function App() {
                         </span>
                       ))}
                     </div>
-                    <ul>
-                      {job.bullets.map((bullet) => (
-                        <li key={bullet}>{bullet}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </article>
-              ))}
-            </div>
-            <p className="edu">
+                  </li>
+                )
+              })}
+            </ol>
+            <p className="edu reveal">
               {EDUCATION.degree}, {EDUCATION.full} · {EDUCATION.dates}
             </p>
           </section>
 
-          <section
-            id="work"
-            className={`section ${focusId === 'work' ? 'is-focus' : ''}`}
-          >
-            <div className="kicker">05 · Work</div>
-            <div className="work-head">
+          <section id="work" className="section">
+            <div className="kicker reveal">{kicker('work')}</div>
+            <div className="work-head reveal" style={delay(1)}>
               <h2>Selected builds worth opening the door for.</h2>
               <p className="copy">
-                Portl is the live nightlife product from SOC Solutions. The rest is the
-                marketplace, classroom AI, messaging, and the medical model.
+                Every card shows the system underneath. Portl is the live nightlife product
+                from SOC Solutions; the rest is the marketplace, classroom AI, messaging, and
+                the medical model.
               </p>
             </div>
 
-            <article className="featured">
+            <article className="featured reveal" style={delay(2)}>
               <div className="featured-copy">
                 <div className="kicker">{featured.kicker}</div>
                 <h3>{featured.name}</h3>
@@ -359,6 +441,7 @@ export default function App() {
                 </a>
                 <p className="copy">{featured.blurb}</p>
                 <p className="copy">{featured.details}</p>
+                <FlowDiagram steps={featured.flow} label={`${featured.name} system flow`} />
                 <div className="chips">
                   {featured.stack.map((tag) => (
                     <span className="chip" key={tag}>
@@ -371,12 +454,13 @@ export default function App() {
             </article>
 
             <div className="work-grid">
-              {rest.map((project) => (
-                <article className="card" key={project.id}>
+              {rest.map((project, index) => (
+                <article className="card reveal" key={project.id} style={delay(index + 1)}>
                   <div className="kicker">{project.kicker}</div>
                   <h3>{project.name}</h3>
                   <p>{project.blurb}</p>
-                  <p>{project.details}</p>
+                  <FlowDiagram steps={project.flow} label={`${project.name} system flow`} />
+                  <p className="card-note">{project.details}</p>
                   <div className="chips">
                     {project.stack.map((tag) => (
                       <span className="chip" key={tag}>
@@ -389,36 +473,31 @@ export default function App() {
             </div>
           </section>
 
-          <section
-            id="signal"
-            className={`section signal ${focusId === 'signal' ? 'is-focus' : ''}`}
-          >
-            <div className="kicker">06 · Signal</div>
-            <h2>If the night is overbooked, send the booking to me.</h2>
-            <p className="copy">
+          <section id="signal" className="section signal">
+            <div className="kicker reveal">{kicker('signal')}</div>
+            <h2 className="reveal" style={delay(1)}>
+              If the night is overbooked, send the booking to me.
+            </h2>
+            <p className="copy reveal" style={delay(2)}>
               I am in {PROFILE.location}. If you need a backend focused full stack engineer
               who can own booking, matching, payments, and still ship the UI when it
               matters, the channel is open.
             </p>
-            <div className="signal-panel">
+            <div className="signal-panel reveal" style={delay(3)}>
               <div>
                 <a className="mail" href={`mailto:${PROFILE.email}`}>
                   {PROFILE.email}
                 </a>
                 <p className="copy">{PROFILE.phone}</p>
-                <div className="hero-actions">
-                  <a className="btn primary" href={`mailto:${PROFILE.email}`}>
-                    Send a signal
-                  </a>
-                  <a className="btn" href={PROFILE.resume} target="_blank" rel="noreferrer">
-                    Download resume
-                  </a>
-                </div>
+                <a className="btn primary" href={`mailto:${PROFILE.email}`}>
+                  Send a signal
+                </a>
               </div>
               <div className="contact-list">
                 {LINKS.map((link) => (
                   <a key={link.label} href={link.href} target="_blank" rel="noreferrer">
                     {link.label}
+                    <span aria-hidden="true">↗</span>
                   </a>
                 ))}
               </div>
@@ -427,15 +506,25 @@ export default function App() {
         </main>
       </div>
 
-      {tourOpen && (
-        <TourDock
-          step={tourStep}
-          paused={paused}
-          onPrev={prevStep}
-          onNext={nextStep}
-          onToggle={() => setPaused((value) => !value)}
-          onClose={closeTour}
-        />
+      {tourPhase === 'ticket' && <TourTicket onDone={enterRooms} />}
+
+      {tourPhase === 'rooms' && (
+        <>
+          <TourSpotlight target={TOUR_STEPS[tourStep].target} />
+          <TourRoute step={tourStep} visited={visited} onJump={showStep} />
+          <TourDock
+            ref={dockRef}
+            step={tourStep}
+            visited={visited}
+            autoplay={autoplay}
+            onPrev={prevStep}
+            onNext={nextStep}
+            onToggleAutoplay={() => setAutoplay((value) => !value)}
+            onHold={setHolding}
+            onRestart={startTour}
+            onClose={closeTour}
+          />
+        </>
       )}
     </>
   )
